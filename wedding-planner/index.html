@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>💍 결혼 준비 현황</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    :root {
+      --rose:       #c8788e;
+      --rose-light: #f7eaed;
+      --rose-mid:   #e8b4bf;
+      --gold:       #c9a05a;
+      --gold-light: #f8f2e4;
+      --text:       #3a2828;
+      --text-muted: #9c7878;
+      --bg:         #fdfaf9;
+      --card:       #ffffff;
+      --border:     #edddd4;
+      --done-bg:    #e8f4e8;
+      --done-fg:    #4a9a4a;
+      --prog-bg:    #fff3e0;
+      --prog-fg:    #d97b35;
+      --pend-bg:    #f0f0f0;
+      --pend-fg:    #888888;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(160deg, #d4849c 0%, #c09ab4 55%, #a89ac8 100%);
+      color: white;
+      padding: 32px 20px 24px;
+      text-align: center;
+    }
+
+    /* ── Couple Photo ── */
+    .couple-photo-wrap {
+      margin-bottom: 14px;
+    }
+    .couple-photo {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid rgba(255,255,255,0.75);
+      box-shadow: 0 4px 18px rgba(0,0,0,0.22);
+    }
+
+    .header-ring { font-size: 2.4rem; line-height: 1; margin-bottom: 8px; }
+    .couple-names { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.08em; margin-bottom: 6px; }
+
+    .header-info { margin-bottom: 18px; display: flex; flex-direction: column; gap: 5px; align-items: center; }
+    .header-date {
+      font-size: 0.95rem;
+      opacity: 0.93;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .header-venue {
+      font-size: 0.88rem;
+      opacity: 0.85;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .header-address {
+      font-size: 0.82rem;
+      opacity: 0.78;
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    .progress-wrap {
+      background: rgba(255,255,255,0.22);
+      border-radius: 14px;
+      padding: 13px 18px;
+    }
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      margin-bottom: 8px;
+      opacity: 0.95;
+    }
+    .progress-bar {
+      background: rgba(255,255,255,0.3);
+      border-radius: 10px;
+      height: 9px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      background: white;
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.6s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ── Main ── */
+    .main { padding: 18px 14px 32px; max-width: 640px; margin: 0 auto; }
+
+    /* ── Category ── */
+    .cat-section { margin-bottom: 24px; }
+    .cat-title {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--rose);
+      padding: 10px 2px 9px;
+      border-bottom: 2px solid var(--rose-light);
+      margin-bottom: 10px;
+    }
+    .cat-count {
+      margin-left: auto;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--rose-light);
+      border-radius: 12px;
+      padding: 2px 8px;
+    }
+
+    /* ── Item Card ── */
+    .item-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px 15px 13px;
+      margin-bottom: 9px;
+      box-shadow: 0 2px 10px rgba(170,100,120,0.09);
+      border: 1px solid var(--border);
+    }
+    .item-card.is-done     { border-left: 3px solid var(--done-fg); }
+    .item-card.is-progress { border-left: 3px solid var(--prog-fg); }
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+    .item-name { font-size: 0.97rem; font-weight: 600; line-height: 1.4; }
+    .status-badge {
+      flex-shrink: 0;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+    .badge-pending  { background: var(--pend-bg); color: var(--pend-fg); }
+    .badge-progress { background: var(--prog-bg); color: var(--prog-fg); }
+    .badge-done     { background: var(--done-bg); color: var(--done-fg); }
+    .item-body { display: flex; flex-direction: column; gap: 5px; }
+    .item-vendor {
+      font-size: 0.88rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .item-vendor .label { color: var(--text-muted); font-size: 0.78rem; }
+    .item-memo {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      background: var(--rose-light);
+      border-radius: 8px;
+      padding: 7px 10px;
+      line-height: 1.5;
+    }
+    .item-photo-display {
+      width: auto;
+      max-width: 100%;
+      max-height: 200px;
+      object-fit: contain;
+      border-radius: 10px;
+      margin-top: 6px;
+      display: block;
+      cursor: zoom-in;
+      background: #f5f5f5;
+    }
+
+    /* 라이트박스 */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img {
+      max-width: 100%;
+      max-height: 92vh;
+      object-fit: contain;
+      border-radius: 10px;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 16px; right: 20px;
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+      line-height: 1;
+      background: none;
+      border: none;
+    }
+    .item-site {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      font-size: 0.92rem;
+      color: var(--rose);
+      text-decoration: none;
+      background: var(--rose-light);
+      border: 1.5px solid var(--rose-mid);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-weight: 700;
+      width: 100%;
+      transition: background 0.15s;
+    }
+    .item-site:active { background: var(--rose-mid); }
+
+    /* ── Empty ── */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-icon { font-size: 3.5rem; margin-bottom: 14px; }
+    .empty p { font-size: 0.92rem; line-height: 1.7; }
+    .empty .hint { font-size: 0.78rem; margin-top: 10px; color: #bbb; }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding: 20px 16px 32px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+    .footer a { color: var(--rose); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="couple-photo-wrap" id="photoWrap" style="display:none">
+    <img class="couple-photo" id="couplePhoto" src="" alt="커플 사진">
+  </div>
+  <div class="header-ring" id="headerRing">💍</div>
+  <div class="couple-names" id="coupleNames">결혼 준비 현황</div>
+  <div class="header-info">
+    <div class="header-date"    id="weddingDate"    style="display:none"></div>
+    <div class="header-venue"   id="weddingVenue"   style="display:none"></div>
+    <div class="header-address" id="weddingAddress" style="display:none"></div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-meta">
+      <span>전체 진행률</span>
+      <span id="progressText">-</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+  </div>
+</div>
+
+<main class="main" id="main"></main>
+
+<!-- 라이트박스 -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<footer class="footer">
+  💕 우리의 소중한 결혼 준비&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="admin.html">관리자</a>
+</footer>
+
+<script>
+async function loadData() {
+  // URL 파라미터에서 Supabase 크리덴셜 확인 (공유 링크로 접근 시)
+  const params = new URLSearchParams(window.location.search);
+  const sbUrl  = params.get('su') || localStorage.getItem('sbUrl');
+  const sbKey  = params.get('sk') || localStorage.getItem('sbKey');
+  if (params.get('su')) localStorage.setItem('sbUrl', params.get('su'));
+  if (params.get('sk')) localStorage.setItem('sbKey', params.get('sk'));
+
+  // Supabase에서 최신 데이터 로드
+  if (sbUrl && sbKey && window.supabase) {
+    try {
+      const client = window.supabase.createClient(sbUrl, sbKey);
+      const { data, error } = await client
+        .from('wedding').select('payload').eq('id', 'main').maybeSingle();
+      if (!error && data?.payload) return data.payload;
+    } catch {}
+  }
+
+  // Fallback 1: URL 해시 (Supabase 미사용 공유 링크)
+  const hash = window.location.hash;
+  if (hash.startsWith('#d=')) {
+    try { return JSON.parse(decodeURIComponent(atob(hash.slice(3)))); } catch(e) {}
+  }
+  // Fallback 2: 로컬 스토리지
+  try {
+    const raw = localStorage.getItem('weddingData');
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+
+/* ── IndexedDB 헬퍼 ── */
+let _db = null;
+function openPhotoDB() {
+  if (_db) return Promise.resolve(_db);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('weddingPhotosDB', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('photos');
+    req.onsuccess  = e => { _db = e.target.result; resolve(_db); };
+    req.onerror    = e => reject(e.target.error);
+  });
+}
+async function dbGet(key) {
+  try {
+    const db = await openPhotoDB();
+    return new Promise(res => {
+      const r = db.transaction('photos').objectStore('photos').get(key);
+      r.onsuccess = () => res(r.result || null);
+      r.onerror   = () => res(null);
+    });
+  } catch { return null; }
+}
+
+async function render(data) {
+  const main = document.getElementById('main');
+
+  // 커플 사진 — IndexedDB에서 로드
+  const photo = await dbGet('weddingPhoto');
+  if (photo) {
+    document.getElementById('couplePhoto').src = photo;
+    document.getElementById('photoWrap').style.display = 'block';
+    document.getElementById('headerRing').style.display = 'none';
+  }
+
+  // Header info
+  const info = data.info || {};
+  if (info.coupleNames) document.getElementById('coupleNames').textContent = info.coupleNames;
+
+  if (info.weddingDate) {
+    const el = document.getElementById('weddingDate');
+    el.innerHTML = '📅 ' + escHtml(info.weddingDate);
+    el.style.display = 'flex';
+  }
+  if (info.venueName) {
+    const el = document.getElementById('weddingVenue');
+    el.innerHTML = '🏛️ ' + escHtml(info.venueName);
+    el.style.display = 'flex';
+  }
+  if (info.address) {
+    const el = document.getElementById('weddingAddress');
+    el.innerHTML = '📍 ' + escHtml(info.address);
+    el.style.display = 'flex';
+  }
+
+  // Progress
+  let total = 0, done = 0;
+  (data.categories || []).forEach(c => c.items.forEach(i => {
+    total++;
+    if (i.status === 'done') done++;
+  }));
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('progressText').textContent = `${done} / ${total} 완료 (${pct}%)`;
+  document.getElementById('progressFill').style.width = pct + '%';
+
+  // Categories
+  main.innerHTML = '';
+  (data.categories || []).forEach(cat => {
+    const sec = document.createElement('div');
+    sec.className = 'cat-section';
+
+    const catDone = cat.items.filter(i => i.status === 'done').length;
+    sec.innerHTML = `
+      <div class="cat-title">
+        <span>${cat.emoji || ''}</span>
+        <span>${escHtml(cat.name)}</span>
+        <span class="cat-count">${catDone}/${cat.items.length}</span>
+      </div>
+    `;
+
+    cat.items.forEach(item => {
+      const statusLabel = { pending: '미정', progress: '진행중', done: '완료' }[item.status] || '미정';
+      const statusClass = { pending: 'badge-pending', progress: 'badge-progress', done: 'badge-done' }[item.status] || 'badge-pending';
+      const cardClass   = { progress: 'is-progress', done: 'is-done' }[item.status] || '';
+
+      const card = document.createElement('div');
+      card.className = `item-card ${cardClass}`;
+
+      let body = '';
+      if (item.vendor)  body += `
+        <div class="item-vendor">
+          <span class="label">🏪 업체</span>
+          <strong>${escHtml(item.vendor)}</strong>
+        </div>`;
+      if (item.address) body += `
+        <div class="item-vendor">
+          <span class="label">📍 주소</span>
+          <span>${escHtml(item.address)}</span>
+        </div>`;
+      if (item.date)    body += `
+        <div class="item-vendor">
+          <span class="label">📅 날짜</span>
+          <span>${escHtml(item.date)}</span>
+        </div>`;
+      if (item.memo)    body += `<div class="item-memo">📝 ${escHtml(item.memo)}</div>`;
+      if (item.site)    body += `
+        <a href="${escAttr(item.site)}" class="item-site" target="_blank" rel="noopener noreferrer">
+          🔗 링크 바로가기
+        </a>`;
+      // 항목 사진은 카드를 먼저 붙인 뒤 비동기로 채움 (아래 참고)
+
+      const photoSlot = document.createElement('div');
+      card.innerHTML = `
+        <div class="item-top">
+          <span class="item-name">${escHtml(item.name)}</span>
+          <span class="status-badge ${statusClass}">${statusLabel}</span>
+        </div>
+        ${body ? `<div class="item-body">${body}</div>` : ''}
+      `;
+      card.appendChild(photoSlot);
+      sec.appendChild(card);
+
+      // 항목 사진 비동기 로드
+      dbGet('itemPhoto_' + item.id).then(src => {
+        if (src) {
+          const img = document.createElement('img');
+          img.className = 'item-photo-display';
+          img.src = src;
+          img.alt = item.name + ' 사진';
+          img.onclick = () => openLightbox(src);
+          photoSlot.appendChild(img);
+        }
+      });
+    });
+
+    main.appendChild(sec);
+  });
+}
+
+function showEmpty() {
+  document.getElementById('main').innerHTML = `
+    <div class="empty">
+      <div class="empty-icon">💐</div>
+      <p>아직 입력된 결혼 준비 정보가 없어요.<br>관리자 페이지에서 정보를 입력해주세요.</p>
+      <p class="hint">관리자 → admin.html</p>
+    </div>
+  `;
+}
+
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  s = String(s);
+  if (!/^https?:\/\//i.test(s) && !/^\//.test(s)) s = 'https://' + s;
+  return s.replace(/"/g, '%22');
+}
+
+loadData().then(data => {
+  if (data) render(data);
+  else showEmpty();
+});
+
+</script>
+</body>
+</html>
