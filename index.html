@@ -332,8 +332,9 @@ async function loadData() {
     try {
       const client = window.supabase.createClient(sbUrl, sbKey);
       const { data, error } = await client
-        .from('wedding').select('payload').eq('id', 'main').maybeSingle();
-      if (!error && data?.payload) return data.payload;
+        .from('wedding').select('payload, updated_at').eq('id', 'main')
+        .order('updated_at', { ascending: false }).limit(1);
+      if (!error && data?.[0]?.payload) return data[0].payload;
     } catch {}
   }
 

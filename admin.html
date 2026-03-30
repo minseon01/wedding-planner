@@ -737,6 +737,18 @@
         <button class="btn-save" style="font-size:0.9rem" onclick="saveSupabaseConfig()">연동 저장 &amp; 테스트</button>
       </div>
 
+      <!-- App Sync Link -->
+      <div class="info-card" id="appSyncCard" style="display:none">
+        <h3>📱 앱 연동 링크</h3>
+        <p style="font-size:0.83rem;color:var(--text-muted);line-height:1.6;margin-bottom:14px">
+          다른 기기(폰·태블릿)에서 이 링크를 열면<br>
+          Supabase가 자동 연결되어 데이터가 동기화돼요.
+        </p>
+        <div class="share-url-box" id="appSyncUrlBox" style="font-size:0.75rem;word-break:break-all;margin-bottom:12px"></div>
+        <button class="btn-save" style="font-size:0.9rem" onclick="copyAppSyncUrl()">링크 복사하기</button>
+        <div id="appSyncCopyOk" style="font-size:0.82rem;color:var(--rose);margin-top:8px;min-height:18px"></div>
+      </div>
+
       <!-- Share -->
       <div class="info-card">
         <h3>🔗 공유 링크</h3>
@@ -848,6 +860,11 @@ let sbClient       = null;
    Supabase 헬퍼
 ═══════════════════════════════════════ */
 function initSupabase() {
+  // URL 파라미터로 전달된 자격증명 자동 저장 (앱 연동용)
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('su')) localStorage.setItem(SB_URL_KEY, params.get('su'));
+  if (params.get('sk')) localStorage.setItem(SB_KEY_KEY, params.get('sk'));
+
   const url = localStorage.getItem(SB_URL_KEY);
   const key = localStorage.getItem(SB_KEY_KEY);
   if (url && key && window.supabase) {
@@ -901,6 +918,7 @@ async function saveSupabaseConfig() {
     box.style.borderColor = '#a5d6a7';
     box.textContent = '✅ 연결 성공! 이제 저장할 때마다 실시간으로 동기화돼요.';
     showToast('✅ Supabase 연동 완료');
+    renderAppSyncUrl();
     // 현재 데이터를 Supabase에 업로드
     if (currentData) await sbSave(currentData);
   } catch(e) {
@@ -1551,6 +1569,32 @@ function importData(input) {
 }
 
 /* ═══════════════════════════════════════
+   앱 연동 링크
+═══════════════════════════════════════ */
+function renderAppSyncUrl() {
+  const sbUrl = localStorage.getItem(SB_URL_KEY);
+  const sbKey = localStorage.getItem(SB_KEY_KEY);
+  const card  = document.getElementById('appSyncCard');
+  if (!sbUrl || !sbKey) { card.style.display = 'none'; return; }
+  const base = window.location.href.split('?')[0].split('#')[0];
+  const link = `${base}?su=${encodeURIComponent(sbUrl)}&sk=${encodeURIComponent(sbKey)}`;
+  document.getElementById('appSyncUrlBox').textContent = link;
+  card.style.display = 'block';
+}
+
+function copyAppSyncUrl() {
+  const url = document.getElementById('appSyncUrlBox').textContent;
+  const done = () => { document.getElementById('appSyncCopyOk').textContent = '✅ 링크가 복사되었습니다!'; };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(done);
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = url; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta); done();
+  }
+}
+
+/* ═══════════════════════════════════════
    Tab Switching
 ═══════════════════════════════════════ */
 function switchTab(tab) {
@@ -1559,6 +1603,7 @@ function switchTab(tab) {
   document.getElementById('tab-' + tab).classList.add('active');
   document.getElementById('content-' + tab).classList.add('active');
   document.getElementById('saveBar').style.display = (tab === 'settings') ? 'none' : 'flex';
+  if (tab === 'settings') renderAppSyncUrl();
 }
 
 /* ═══════════════════════════════════════
