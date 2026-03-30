@@ -164,7 +164,7 @@
       align-items: center;
       gap: 5px;
     }
-    .item-vendor .label { color: var(--text-muted); font-size: 0.78rem; }
+    .item-vendor .label { color: var(--text-muted); font-size: 0.78rem; white-space: nowrap; }
     .item-memo {
       font-size: 0.83rem;
       color: var(--text-muted);
@@ -259,6 +259,49 @@
       transition: background 0.15s;
     }
     .item-site:active { background: var(--rose-mid); }
+
+    /* ── D-Day Strip ── */
+    .dday-strip {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 16px 14px 8px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .dday-strip::-webkit-scrollbar { display: none; }
+    .dday-card {
+      flex-shrink: 0;
+      scroll-snap-align: start;
+      background: var(--card);
+      border: 1.5px solid var(--rose-mid);
+      border-radius: 16px;
+      padding: 12px 16px 10px;
+      min-width: 110px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(170,100,120,0.09);
+    }
+    .dday-card-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 110px;
+    }
+    .dday-card-num {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--rose);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .dday-card-num.dday-today { color: #c9a05a; }
+    .dday-card-num.dday-past  { color: var(--text-muted); font-size: 1.1rem; }
+    .dday-card-date { font-size: 0.68rem; color: var(--text-muted); }
 
     /* ── Empty ── */
     .empty {
@@ -414,8 +457,32 @@ async function render(data) {
   document.getElementById('progressText').textContent = `${done} / ${total} 완료 (${pct}%)`;
   document.getElementById('progressFill').style.width = pct + '%';
 
-  // Categories
+  // D-Day 스트립
   main.innerHTML = '';
+  if (data.ddays && data.ddays.length) {
+    const strip = document.createElement('div');
+    strip.className = 'dday-strip';
+    data.ddays.forEach(d => {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const target = new Date(d.targetDate); target.setHours(0,0,0,0);
+      const diff = Math.round((target - today) / 86400000);
+      let label, cls;
+      if (diff === 0)      { label = 'D-Day'; cls = 'dday-today'; }
+      else if (diff > 0)   { label = `D-${diff}`;        cls = ''; }
+      else                 { label = `D+${Math.abs(diff)}`; cls = 'dday-past'; }
+      const card = document.createElement('div');
+      card.className = 'dday-card';
+      card.innerHTML = `
+        <div class="dday-card-label">${escHtml(d.label)}</div>
+        <div class="dday-card-num ${cls}">${label}</div>
+        <div class="dday-card-date">${d.targetDate}</div>
+      `;
+      strip.appendChild(card);
+    });
+    main.appendChild(strip);
+  }
+
+  // Categories
   (data.categories || []).forEach(cat => {
     const sec = document.createElement('div');
     sec.className = 'cat-section';

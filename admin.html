@@ -494,6 +494,24 @@
     }
     .btn-add-cat:active { background: var(--rose-light); }
 
+    /* ── D-Day Management ── */
+    .dday-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--rose-light);
+      border: 1px solid var(--rose-mid);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    .dday-item-info { flex: 1; min-width: 0; }
+    .dday-item-label { font-size: 0.88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dday-item-date  { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .dday-item-badge { font-size: 0.82rem; font-weight: 700; color: var(--rose); white-space: nowrap; }
+    .btn-del-dday    { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 2px 4px; flex-shrink: 0; }
+    .dday-add-row    { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+
     /* ── Save Bar ── */
     .save-bar {
       position: fixed;
@@ -713,6 +731,26 @@
           <input type="text" class="field-input" id="address"
                  placeholder="예) 서울 중구 을지로 30">
         </div>
+      </div>
+
+      <!-- D-Day Management -->
+      <div class="info-card">
+        <h3>⏳ D-Day 관리</h3>
+        <p style="font-size:0.83rem;color:var(--text-muted);line-height:1.6;margin-bottom:12px">
+          웹 상단에 표시할 D-Day를 추가하세요.<br>
+          항목의 날짜를 선택하거나 직접 입력할 수 있어요.
+        </p>
+        <div id="ddayList"></div>
+        <div style="margin-bottom:8px">
+          <select class="field-input" id="ddayItemPick" onchange="onDdayItemPick(this)">
+            <option value="">📋 항목에서 날짜 선택...</option>
+          </select>
+        </div>
+        <div class="dday-add-row">
+          <input type="text" class="field-input" id="ddayLabel" placeholder="이름 (예: 웨딩홀 계약)">
+          <input type="date" class="field-input" id="ddayDate">
+        </div>
+        <button class="btn-save" style="font-size:0.9rem;width:100%" onclick="addDday()">+ D-Day 추가</button>
       </div>
     </div>
 
@@ -1098,6 +1136,7 @@ async function init() {
 
   renderInfoTab();
   renderChecklist();
+  renderDdaySection();
   dbGet(PHOTO_KEY).then(photo => { if (photo) showPhotoPreview(photo); });
 
   // Settings 탭 — 저장된 Supabase 정보 표시
@@ -1569,6 +1608,91 @@ function importData(input) {
 }
 
 /* ═══════════════════════════════════════
+   D-Day 관리
+═══════════════════════════════════════ */
+function parseDateStr(str) {
+  if (!str) return '';
+  let m = str.match(/(\d{4})[-.](\d{1,2})[-.](\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m = str.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  return '';
+}
+function calcDdayLabel(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr); target.setHours(0,0,0,0);
+  const diff = Math.round((target - today) / 86400000);
+  if (diff === 0) return 'D-Day';
+  return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+}
+function renderDdaySection() {
+  const list = document.getElementById('ddayList');
+  if (!list) return;
+  if (!currentData.ddays || !currentData.ddays.length) {
+    list.innerHTML = '<p style="font-size:0.82rem;color:var(--text-muted);text-align:center;padding:6px 0 12px">아직 D-Day가 없어요</p>';
+    return;
+  }
+  list.innerHTML = '';
+  currentData.ddays.forEach((d, idx) => {
+    const badge = d.targetDate ? calcDdayLabel(d.targetDate) : '';
+    const el = document.createElement('div');
+    el.className = 'dday-item';
+    el.innerHTML = `
+      <div class="dday-item-info">
+        <div class="dday-item-label">${escHtml(d.label)}</div>
+        <div class="dday-item-date">${d.targetDate || ''}</div>
+      </div>
+      <span class="dday-item-badge">${badge}</span>
+      <button class="btn-del-dday" onclick="deleteDday(${idx})" title="삭제">🗑️</button>
+    `;
+    list.appendChild(el);
+  });
+}
+function refreshDdayItemPicker() {
+  const sel = document.getElementById('ddayItemPick');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">📋 항목에서 날짜 선택...</option>';
+  (currentData.categories || []).forEach(cat => {
+    (cat.items || []).forEach(item => {
+      const d = parseDateStr(item.date);
+      if (!d) return;
+      const opt = document.createElement('option');
+      opt.value = JSON.stringify({ label: item.name, date: d });
+      opt.textContent = `${cat.name} › ${item.name} (${d})`;
+      sel.appendChild(opt);
+    });
+  });
+}
+function onDdayItemPick(sel) {
+  if (!sel.value) return;
+  try {
+    const p = JSON.parse(sel.value);
+    document.getElementById('ddayLabel').value = p.label;
+    document.getElementById('ddayDate').value  = p.date;
+  } catch {}
+  sel.value = '';
+}
+function addDday() {
+  const label = document.getElementById('ddayLabel').value.trim();
+  const date  = document.getElementById('ddayDate').value;
+  if (!label) { showToast('이름을 입력해주세요'); return; }
+  if (!date)  { showToast('날짜를 선택해주세요'); return; }
+  if (!currentData.ddays) currentData.ddays = [];
+  currentData.ddays.push({ id: 'dday_' + Date.now(), label, targetDate: date });
+  document.getElementById('ddayLabel').value = '';
+  document.getElementById('ddayDate').value  = '';
+  renderDdaySection();
+  autoSave();
+  showToast('D-Day가 추가되었습니다');
+}
+function deleteDday(idx) {
+  currentData.ddays.splice(idx, 1);
+  renderDdaySection();
+  autoSave();
+  showToast('D-Day가 삭제되었습니다');
+}
+
+/* ═══════════════════════════════════════
    앱 연동 링크
 ═══════════════════════════════════════ */
 function renderAppSyncUrl() {
@@ -1604,6 +1728,7 @@ function switchTab(tab) {
   document.getElementById('content-' + tab).classList.add('active');
   document.getElementById('saveBar').style.display = (tab === 'settings') ? 'none' : 'flex';
   if (tab === 'settings') renderAppSyncUrl();
+  if (tab === 'info') refreshDdayItemPicker();
 }
 
 /* ═══════════════════════════════════════
