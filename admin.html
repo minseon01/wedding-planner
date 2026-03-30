@@ -862,17 +862,20 @@ async function sbLoad() {
   if (!sbClient) return null;
   try {
     const { data, error } = await sbClient
-      .from('wedding').select('payload').eq('id', 'main').maybeSingle();
+      .from('wedding').select('payload, updated_at').eq('id', 'main')
+      .order('updated_at', { ascending: false }).limit(1);
     if (error) throw error;
-    return data?.payload || null;
+    return data?.[0]?.payload || null;
   } catch { return null; }
 }
 
 async function sbSave(payload) {
   if (!sbClient) return false;
   try {
+    // 기존 행 삭제 후 새로 삽입 — id에 unique 제약이 없어도 중복 없이 동작
+    await sbClient.from('wedding').delete().eq('id', 'main');
     const { error } = await sbClient.from('wedding')
-      .upsert({ id: 'main', payload, updated_at: new Date().toISOString() });
+      .insert({ id: 'main', payload, updated_at: new Date().toISOString() });
     return !error;
   } catch { return false; }
 }
@@ -1536,7 +1539,7 @@ function importData(input) {
       if (!parsed.categories) throw new Error('올바른 백업 파일이 아닙니다');
       currentData = parsed;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
-      await sbSave();
+      if (sbClient) await sbSave(currentData);
       await init();
       showToast('데이터가 복원되었습니다 ✓');
     } catch(err) {
