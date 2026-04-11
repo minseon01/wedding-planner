@@ -381,8 +381,9 @@ async function loadData() {
         .order('updated_at', { ascending: false }).limit(1);
       if (!error && data?.[0]?.payload) {
         const payload = data[0].payload;
-        // Supabase에서 받은 사진 데이터를 IndexedDB에 복원
+        // Supabase에서 받은 사진 데이터를 별도 보관 후 IndexedDB에도 복원
         if (payload._photos) {
+          window._sbPhotos = payload._photos;
           try {
             const db = await openPhotoDB();
             for (const [key, value] of Object.entries(payload._photos)) {
@@ -445,8 +446,8 @@ async function dbGet(key) {
 async function render(data) {
   const main = document.getElementById('main');
 
-  // 커플 사진 — IndexedDB에서 로드
-  const photo = await dbGet('weddingPhoto');
+  // 커플 사진 — Supabase 데이터 우선, IndexedDB 폴백
+  const photo = (window._sbPhotos && window._sbPhotos['weddingPhoto']) || await dbGet('weddingPhoto');
   if (photo) {
     document.getElementById('couplePhoto').src = photo;
     document.getElementById('photoWrap').style.display = 'block';
@@ -564,9 +565,10 @@ async function render(data) {
       card.appendChild(photoSlot);
       sec.appendChild(card);
 
-      // 항목 사진 갤러리 비동기 로드 (여러 장)
+      // 항목 사진 갤러리 비동기 로드 (여러 장) — Supabase 데이터 우선
       (async () => {
-        let photos = await dbGet('itemPhotos_' + item.id);
+        const photoKey = 'itemPhotos_' + item.id;
+        let photos = (window._sbPhotos && window._sbPhotos[photoKey]) || await dbGet(photoKey);
         if (!photos || !photos.length) {
           const old = await dbGet('itemPhoto_' + item.id);
           if (old) photos = [old];
