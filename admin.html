@@ -1253,6 +1253,13 @@ async function init() {
       if (raw) currentData = JSON.parse(raw);
     } catch(e) {}
   }
+  // Fallback: data.json 파일에서 로드 (Safari file:// localStorage 제한 대응)
+  if (!currentData) {
+    try {
+      const resp = await fetch('data.json?t=' + Date.now());
+      if (resp.ok) currentData = await resp.json();
+    } catch(e) {}
+  }
   if (!currentData) {
     currentData = {
       info: { coupleNames: '', weddingDate: '', venueName: '', address: '' },
