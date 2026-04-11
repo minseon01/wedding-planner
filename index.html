@@ -365,8 +365,10 @@
 async function loadData() {
   // URL 파라미터에서 Supabase 크리덴셜 확인 (공유 링크로 접근 시)
   const params = new URLSearchParams(window.location.search);
-  const sbUrl  = params.get('su') || localStorage.getItem('sbUrl');
-  const sbKey  = params.get('sk') || localStorage.getItem('sbKey');
+  const SB_DEFAULT_URL = 'https://avsxaetcdcnwxhioywoz.supabase.co';
+  const SB_DEFAULT_KEY = 'sb_publishable_4CmFzKOxfkmzSR51SGlfTQ_lGByt3ch';
+  const sbUrl  = params.get('su') || localStorage.getItem('sbUrl') || SB_DEFAULT_URL;
+  const sbKey  = params.get('sk') || localStorage.getItem('sbKey') || SB_DEFAULT_KEY;
   if (params.get('su')) localStorage.setItem('sbUrl', params.get('su'));
   if (params.get('sk')) localStorage.setItem('sbKey', params.get('sk'));
 
