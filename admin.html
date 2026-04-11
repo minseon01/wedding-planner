@@ -983,7 +983,6 @@
       </div>
     </div>
     <button class="btn-share-icon" onclick="openShareModal()" title="공유 링크">📤</button>
-    <button class="btn-share-icon" onclick="exportDataJson()" title="data.json 내보내기">📁</button>
   </div>
 </div>
 
@@ -1638,8 +1637,6 @@ async function saveData() {
   clearTimeout(autoSaveTimer);
   collectInfo();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
-  // data.json 자동 다운로드 (GitHub Pages 반영용)
-  exportDataJson(true);
   if (sbClient) {
     const ok = await sbSave(currentData);
     showToast(ok ? '✅ 저장 및 동기화 완료' : '✅ 저장됨 (동기화 실패)');
