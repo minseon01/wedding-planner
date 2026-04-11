@@ -1325,6 +1325,7 @@ function handlePhotoUpload(input) {
     await dbSave(PHOTO_KEY, dataUrl);
     showPhotoPreview(dataUrl);
     showToast('📷 사진이 저장되었습니다');
+    autoSave();
   });
 }
 
@@ -1342,6 +1343,7 @@ function deletePhoto() {
   document.getElementById('photoPlaceholder').style.display = 'flex';
   document.getElementById('photoDeleteBtn').style.display   = 'none';
   document.getElementById('photoFileInput').value = '';
+  autoSave();
   showToast('사진이 삭제되었습니다');
 }
 
@@ -1521,6 +1523,7 @@ function buildItemCard(item, ci, ii) {
         photos.splice(idx, 1);
         await dbSave(PHOTOS_KEY, photos);
         refreshPhotoRow();
+        autoSave();
       };
       cell.appendChild(img);
       cell.appendChild(del);
@@ -1563,6 +1566,7 @@ function buildItemCard(item, ci, ii) {
           await dbSave(PHOTOS_KEY, existing.concat(results));
           refreshPhotoRow();
           showToast('📷 사진 ' + files.length + '장 저장됨');
+          autoSave();
         }
       });
     });
