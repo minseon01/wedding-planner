@@ -377,7 +377,25 @@ async function loadData() {
       const { data, error } = await client
         .from('wedding').select('payload, updated_at').eq('id', 'main')
         .order('updated_at', { ascending: false }).limit(1);
-      if (!error && data?.[0]?.payload) return data[0].payload;
+      if (!error && data?.[0]?.payload) {
+        const payload = data[0].payload;
+        // Supabase에서 받은 사진 데이터를 IndexedDB에 복원
+        if (payload._photos) {
+          try {
+            const db = await openPhotoDB();
+            for (const [key, value] of Object.entries(payload._photos)) {
+              await new Promise(res => {
+                const tx = db.transaction('photos', 'readwrite');
+                tx.objectStore('photos').put(value, key);
+                tx.oncomplete = res;
+                tx.onerror = res;
+              });
+            }
+          } catch {}
+          delete payload._photos;
+        }
+        return payload;
+      }
     } catch {}
   }
 

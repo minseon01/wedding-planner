@@ -1244,7 +1244,14 @@ async function init() {
   // Supabase 우선 → 없으면 localStorage
   if (sbClient) {
     const sbData = await sbLoad();
-    if (sbData) currentData = sbData;
+    if (sbData) {
+      // 사진 데이터 복원 후 payload에서 제거
+      if (sbData._photos) {
+        await restorePhotosFromSync(sbData._photos);
+        delete sbData._photos;
+      }
+      currentData = sbData;
+    }
   }
   if (!currentData) {
     try {
@@ -1627,10 +1634,42 @@ function autoSave() {
   autoSaveTimer = setTimeout(async () => {
     collectInfo();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
-    if (sbClient) await sbSave(currentData);
+    if (sbClient) {
+      const photos = await collectPhotosForSync();
+      await sbSave({ ...currentData, _photos: photos });
+    }
     const el = document.getElementById('autoSaveStatus');
     if (el) { el.style.opacity = '1'; setTimeout(() => { el.style.opacity = '0'; }, 2000); }
   }, 800);
+}
+
+async function collectPhotosForSync() {
+  const photos = {};
+  // 커플 사진
+  const couplePhoto = await dbGet(PHOTO_KEY);
+  if (couplePhoto) photos[PHOTO_KEY] = couplePhoto;
+  // 항목 사진
+  for (const cat of (currentData.categories || [])) {
+    for (const item of (cat.items || [])) {
+      const key = 'itemPhotos_' + item.id;
+      const data = await dbGet(key);
+      if (data && data.length) photos[key] = data;
+    }
+  }
+  // 레퍼런스 사진
+  for (const ref of (currentData.refs || [])) {
+    const key = 'refPhotos_' + ref.id;
+    const data = await dbGet(key);
+    if (data && data.length) photos[key] = data;
+  }
+  return photos;
+}
+
+async function restorePhotosFromSync(photos) {
+  if (!photos) return;
+  for (const [key, value] of Object.entries(photos)) {
+    await dbSave(key, value);
+  }
 }
 
 async function saveData() {
@@ -1638,7 +1677,10 @@ async function saveData() {
   collectInfo();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
   if (sbClient) {
-    const ok = await sbSave(currentData);
+    // 사진을 payload에 포함시켜 Supabase에 동기화
+    const photos = await collectPhotosForSync();
+    const payload = { ...currentData, _photos: photos };
+    const ok = await sbSave(payload);
     showToast(ok ? '✅ 저장 및 동기화 완료' : '✅ 저장됨 (동기화 실패)');
   } else {
     showToast('✅ 저장되었습니다');
