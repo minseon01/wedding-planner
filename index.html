@@ -391,6 +391,12 @@ async function loadData() {
     const raw = localStorage.getItem('weddingData');
     if (raw) return JSON.parse(raw);
   } catch(e) {}
+
+  // Fallback 3: 정적 data.json 파일 (GitHub Pages 용)
+  try {
+    const resp = await fetch('data.json?t=' + Date.now());
+    if (resp.ok) return await resp.json();
+  } catch(e) {}
   return null;
 }
 

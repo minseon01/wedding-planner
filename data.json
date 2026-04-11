@@ -1,0 +1,237 @@
+{
+  "info": {
+    "coupleNames": "dd",
+    "weddingDate": "",
+    "venueName": "",
+    "address": ""
+  },
+  "ddays": [
+    {
+      "id": "dday_1774854931476",
+      "label": "웨딩홀 · 예식장",
+      "targetDate": "2026-08-23"
+    }
+  ],
+  "updatedAt": "2026-03-27T15:18:44.117Z",
+  "categories": [
+    {
+      "id": "venue",
+      "name": "웨딩홀 · 예식장",
+      "emoji": "🏛️",
+      "items": [
+        {
+          "id": "wedding_hall",
+          "date": "2026년 8월 23일",
+          "memo": "",
+          "name": "웨딩홀 · 예식장",
+          "site": "",
+          "status": "done",
+          "vendor": "더 화이트 베일",
+          "address": ""
+        }
+      ]
+    },
+    {
+      "id": "seudeume",
+      "name": "스드메",
+      "emoji": "📸",
+      "items": [
+        {
+          "id": "studio",
+          "date": "",
+          "memo": "",
+          "name": "스튜디오",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        },
+        {
+          "id": "dress",
+          "date": "",
+          "memo": "",
+          "name": "웨딩 드레스",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        },
+        {
+          "id": "makeup",
+          "date": "",
+          "memo": "",
+          "name": "신부 메이크업 · 헤어",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        }
+      ]
+    },
+    {
+      "id": "parents",
+      "name": "혼주",
+      "emoji": "👘",
+      "items": [
+        {
+          "id": "hanbok_bride",
+          "date": "",
+          "memo": "",
+          "name": "혼주 한복 (신부측)",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        },
+        {
+          "id": "hanbok_groom",
+          "date": "",
+          "memo": "",
+          "name": "혼주 한복 (신랑측)",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        },
+        {
+          "id": "parents_makeup",
+          "date": "",
+          "memo": "",
+          "name": "혼주 메이크업",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        }
+      ]
+    },
+    {
+      "id": "groom",
+      "name": "신랑 의상",
+      "emoji": "🤵",
+      "items": [
+        {
+          "id": "tuxedo",
+          "date": "",
+          "memo": "",
+          "name": "예복 · 턱시도",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        },
+        {
+          "id": "suit",
+          "date": "",
+          "memo": "",
+          "name": "정장",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        }
+      ]
+    },
+    {
+      "id": "rings",
+      "name": "웨딩링 · 예물",
+      "emoji": "💍",
+      "items": [
+        {
+          "id": "wedding_ring",
+          "date": "",
+          "memo": "",
+          "name": "웨딩링 · 예물반지",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        },
+        {
+          "id": "jewelry",
+          "date": "",
+          "memo": "",
+          "name": "예물 (귀금속)",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        },
+        {
+          "id": "yedan",
+          "date": "",
+          "memo": "",
+          "name": "예단",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        }
+      ]
+    },
+    {
+      "id": "invitation",
+      "name": "청첩장",
+      "emoji": "💌",
+      "items": [
+        {
+          "id": "invite",
+          "date": "",
+          "memo": "",
+          "name": "청첩장 제작",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        }
+      ]
+    },
+    {
+      "id": "extras",
+      "name": "기타",
+      "emoji": "🌸",
+      "items": [
+        {
+          "id": "bouquet",
+          "date": "",
+          "memo": "",
+          "name": "부케",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        },
+        {
+          "id": "honeymoon",
+          "date": "",
+          "memo": "",
+          "name": "신혼여행",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        },
+        {
+          "id": "home_goods",
+          "date": "",
+          "memo": "",
+          "name": "혼수 (가전 · 가구)",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        },
+        {
+          "id": "newhome",
+          "date": "",
+          "memo": "",
+          "name": "신혼집",
+          "site": "",
+          "status": "pending",
+          "vendor": "",
+          "address": ""
+        }
+      ]
+    }
+  ]
+}

@@ -128,9 +128,9 @@
     .tab-bar::-webkit-scrollbar { display: none; }
     .tab-btn {
       flex: 1;
-      min-width: 70px;
-      padding: 13px 6px;
-      font-size: 0.78rem;
+      min-width: 60px;
+      padding: 13px 4px;
+      font-size: 0.73rem;
       font-weight: 600;
       border: none;
       background: none;
@@ -512,6 +512,125 @@
     .btn-del-dday    { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 2px 4px; flex-shrink: 0; }
     .dday-add-row    { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 
+    /* ── Reference Tab ── */
+    .ref-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 15px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 10px rgba(170,100,120,0.08);
+    }
+    .ref-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .ref-card-header input {
+      flex: 1;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-bottom: 1.5px solid var(--border);
+      background: transparent;
+      padding: 4px 0;
+      color: var(--text);
+      font-family: inherit;
+    }
+    .ref-card-header input:focus { outline: none; border-bottom-color: var(--rose); }
+    .btn-del-ref {
+      background: none; border: none;
+      font-size: 1.15rem; cursor: pointer;
+      padding: 2px 4px; flex-shrink: 0;
+      color: var(--text-muted);
+    }
+    .ref-photo-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 0 6px;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 8px;
+    }
+    .ref-photo-row::-webkit-scrollbar { display: none; }
+    .ref-thumb-wrap { position: relative; flex-shrink: 0; }
+    .ref-thumb {
+      width: 90px; height: 90px;
+      object-fit: cover;
+      border-radius: 10px;
+      display: block;
+    }
+    .ref-thumb-del {
+      position: absolute; top: 3px; right: 3px;
+      background: rgba(0,0,0,0.55); color: white;
+      border: none; border-radius: 50%;
+      width: 20px; height: 20px;
+      font-size: 0.7rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ref-add-photo-btn {
+      flex-shrink: 0;
+      width: 90px; height: 90px;
+      border: 2px dashed var(--rose-mid);
+      border-radius: 10px;
+      background: var(--rose-light);
+      color: var(--rose);
+      font-size: 1.6rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ref-link-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .ref-link-row input {
+      flex: 1; font-size: 0.84rem;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 11px;
+      font-family: inherit;
+      color: var(--text);
+      background: white;
+    }
+    .ref-link-row input:focus { outline: none; border-color: var(--rose); }
+    .ref-link-open {
+      flex-shrink: 0;
+      background: var(--rose-light);
+      border: 1.5px solid var(--rose-mid);
+      color: var(--rose);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .ref-memo textarea {
+      width: 100%; font-size: 0.84rem;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 11px;
+      font-family: inherit;
+      resize: none; min-height: 60px;
+      color: var(--text); background: white;
+    }
+    .ref-memo textarea:focus { outline: none; border-color: var(--rose); }
+    .btn-add-ref {
+      width: 100%;
+      padding: 13px;
+      background: white;
+      border: 2px dashed var(--rose-mid);
+      border-radius: 14px;
+      color: var(--rose);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      margin-top: 4px;
+    }
+    .btn-add-ref:active { background: var(--rose-light); }
+
     /* ── Save Bar ── */
     .save-bar {
       position: fixed;
@@ -675,6 +794,7 @@
 
   <div class="tab-bar">
     <button class="tab-btn active" id="tab-checklist" onclick="switchTab('checklist')">✅ 준비항목</button>
+    <button class="tab-btn" id="tab-refs"      onclick="switchTab('refs')">📸 레퍼런스</button>
     <button class="tab-btn" id="tab-info"      onclick="switchTab('info')">💑 기본정보</button>
     <button class="tab-btn" id="tab-settings"  onclick="switchTab('settings')">⚙️ 설정</button>
   </div>
@@ -684,6 +804,12 @@
     <!-- ── Tab: Checklist ── -->
     <div class="tab-content active" id="content-checklist">
       <div id="categoriesList"></div>
+    </div>
+
+    <!-- ── Tab: References ── -->
+    <div class="tab-content" id="content-refs">
+      <div id="refsList"></div>
+      <button class="btn-add-ref" onclick="addRef()">+ 레퍼런스 추가</button>
     </div>
 
     <!-- ── Tab: Info ── -->
@@ -857,6 +983,7 @@
       </div>
     </div>
     <button class="btn-share-icon" onclick="openShareModal()" title="공유 링크">📤</button>
+    <button class="btn-share-icon" onclick="exportDataJson()" title="data.json 내보내기">📁</button>
   </div>
 </div>
 
@@ -1136,6 +1263,7 @@ async function init() {
 
   renderInfoTab();
   renderChecklist();
+  renderRefs();
   renderDdaySection();
   dbGet(PHOTO_KEY).then(photo => { if (photo) showPhotoPreview(photo); });
 
@@ -1511,6 +1639,18 @@ async function saveData() {
   }
 }
 
+function exportDataJson() {
+  collectInfo();
+  const json = JSON.stringify(currentData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'data.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('📁 data.json 다운로드 완료 — 프로젝트 폴더에 넣어주세요');
+}
+
 function generateShareUrl() {
   collectInfo();
   const base = window.location.href
@@ -1693,6 +1833,171 @@ function deleteDday(idx) {
 }
 
 /* ═══════════════════════════════════════
+   레퍼런스 탭
+═══════════════════════════════════════ */
+function renderRefs() {
+  const container = document.getElementById('refsList');
+  if (!container) return;
+  container.innerHTML = '';
+  (currentData.refs || []).forEach((ref, idx) => buildRefCard(ref, idx, container));
+}
+
+function buildRefCard(ref, idx, container) {
+  const card = document.createElement('div');
+  card.className = 'ref-card';
+  card.id = 'refcard-' + ref.id;
+
+  // Header: title + delete
+  const header = document.createElement('div');
+  header.className = 'ref-card-header';
+  const titleInput = document.createElement('input');
+  titleInput.type = 'text';
+  titleInput.placeholder = '제목 (예: 드레스 레퍼런스)';
+  titleInput.value = ref.title || '';
+  titleInput.oninput = () => { currentData.refs[idx].title = titleInput.value; autoSave(); };
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn-del-ref';
+  delBtn.textContent = '🗑️';
+  delBtn.title = '삭제';
+  delBtn.onclick = () => deleteRef(idx);
+  header.appendChild(titleInput);
+  header.appendChild(delBtn);
+  card.appendChild(header);
+
+  // Photo row
+  const photoRow = document.createElement('div');
+  photoRow.className = 'ref-photo-row';
+  const RKEY = 'refPhotos_' + ref.id;
+
+  function refreshRefPhotos() {
+    photoRow.innerHTML = '';
+    dbGet(RKEY).then(photos => {
+      (photos || []).forEach((src, pi) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'ref-thumb-wrap';
+        const img = document.createElement('img');
+        img.className = 'ref-thumb';
+        img.src = src;
+        const xBtn = document.createElement('button');
+        xBtn.className = 'ref-thumb-del';
+        xBtn.textContent = '✕';
+        xBtn.onclick = async () => {
+          const all = await dbGet(RKEY) || [];
+          all.splice(pi, 1);
+          await dbSave(RKEY, all);
+          refreshRefPhotos();
+          autoSave();
+        };
+        wrap.appendChild(img); wrap.appendChild(xBtn);
+        photoRow.appendChild(wrap);
+      });
+      // Add photo button
+      const addPhotoBtn = document.createElement('button');
+      addPhotoBtn.className = 'ref-add-photo-btn';
+      addPhotoBtn.textContent = '+';
+      addPhotoBtn.title = '사진 추가';
+      addPhotoBtn.onclick = () => fileInput.click();
+      photoRow.appendChild(addPhotoBtn);
+    });
+  }
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.multiple = true;
+  fileInput.accept = 'image/*,.jpg,.jpeg,.png,.heic,.heif,.webp';
+  fileInput.style.display = 'none';
+  fileInput.onchange = async () => {
+    const files = Array.from(fileInput.files);
+    const existing = await dbGet(RKEY) || [];
+    let pending = files.length;
+    files.forEach(file => {
+      compressImage(file, async dataUrl => {
+        existing.push(dataUrl);
+        pending--;
+        if (pending === 0) {
+          await dbSave(RKEY, existing);
+          refreshRefPhotos();
+          autoSave();
+        }
+      });
+    });
+    fileInput.value = '';
+  };
+  card.appendChild(fileInput);
+  refreshRefPhotos();
+  card.appendChild(photoRow);
+
+  // Link row
+  const linkRow = document.createElement('div');
+  linkRow.className = 'ref-link-row';
+  const linkInput = document.createElement('input');
+  linkInput.type = 'url';
+  linkInput.placeholder = '🔗 링크 (https://...)';
+  linkInput.value = ref.site || '';
+  linkInput.oninput = () => { currentData.refs[idx].site = linkInput.value; autoSave(); };
+  linkRow.appendChild(linkInput);
+  if (ref.site) {
+    const openBtn = document.createElement('a');
+    openBtn.className = 'ref-link-open';
+    openBtn.href = ref.site;
+    openBtn.target = '_blank';
+    openBtn.rel = 'noopener noreferrer';
+    openBtn.textContent = '열기';
+    linkRow.appendChild(openBtn);
+  }
+  linkInput.oninput = () => {
+    currentData.refs[idx].site = linkInput.value;
+    const existing = linkRow.querySelector('a.ref-link-open');
+    if (linkInput.value) {
+      if (!existing) {
+        const a = document.createElement('a');
+        a.className = 'ref-link-open';
+        a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.textContent = '열기';
+        linkRow.appendChild(a);
+      }
+      linkRow.querySelector('a.ref-link-open').href = linkInput.value;
+    } else if (existing) {
+      existing.remove();
+    }
+    autoSave();
+  };
+  card.appendChild(linkRow);
+
+  // Memo
+  const memoWrap = document.createElement('div');
+  memoWrap.className = 'ref-memo';
+  const memoArea = document.createElement('textarea');
+  memoArea.placeholder = '메모 (분위기, 스타일, 참고사항 등)';
+  memoArea.value = ref.memo || '';
+  memoArea.rows = 2;
+  memoArea.oninput = () => { currentData.refs[idx].memo = memoArea.value; autoSave(); };
+  memoWrap.appendChild(memoArea);
+  card.appendChild(memoWrap);
+
+  container.appendChild(card);
+}
+
+function addRef() {
+  if (!currentData.refs) currentData.refs = [];
+  currentData.refs.push({ id: 'ref_' + Date.now(), title: '', site: '', memo: '' });
+  renderRefs();
+  autoSave();
+  // 마지막 카드 제목 포커스
+  const cards = document.querySelectorAll('.ref-card');
+  if (cards.length) cards[cards.length - 1].querySelector('input').focus();
+}
+
+function deleteRef(idx) {
+  if (!confirm('이 레퍼런스를 삭제할까요?')) return;
+  const ref = currentData.refs[idx];
+  if (ref) dbDelete('refPhotos_' + ref.id);
+  currentData.refs.splice(idx, 1);
+  renderRefs();
+  autoSave();
+}
+
+/* ═══════════════════════════════════════
    앱 연동 링크
 ═══════════════════════════════════════ */
 function renderAppSyncUrl() {
@@ -1729,6 +2034,7 @@ function switchTab(tab) {
   document.getElementById('saveBar').style.display = (tab === 'settings') ? 'none' : 'flex';
   if (tab === 'settings') renderAppSyncUrl();
   if (tab === 'info') refreshDdayItemPicker();
+  if (tab === 'refs') renderRefs();
 }
 
 /* ═══════════════════════════════════════
