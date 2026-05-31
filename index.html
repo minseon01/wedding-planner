@@ -537,15 +537,15 @@ async function render(data) {
           <span class="label">🏪 업체</span>
           <strong>${escHtml(item.vendor)}</strong>
         </div>`;
-      if (item.address) body += `
+      if (item.address && item.address.trim()) body += `
         <div class="item-vendor">
           <span class="label">📍 주소</span>
-          <span>${escHtml(item.address)}</span>
+          <span>${escHtml(item.address.trim())}</span>
         </div>`;
-      if (item.date)    body += `
+      if (item.date && item.date.trim())    body += `
         <div class="item-vendor">
           <span class="label">📅 날짜</span>
-          <span>${escHtml(item.date)}</span>
+          <span>${escHtml(item.date.trim())}</span>
         </div>`;
       if (item.memo)    body += `<div class="item-memo">📝 ${escHtml(item.memo)}</div>`;
       if (item.address && item.address.trim()) body += `
