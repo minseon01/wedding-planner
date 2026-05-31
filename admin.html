@@ -1692,6 +1692,7 @@ function autoSave() {
       const photos = await collectPhotosForSync();
       const res = await sbSave({ ...currentData, _photos: photos });
       if (!res.ok) showToast('⚠️ 동기화 실패: ' + res.error);
+      else if (_photoUploadFailureReason) showToast('데이터는 동기화됨 · 사진 업로드 실패: ' + _photoUploadFailureReason);
     }
     const el = document.getElementById('autoSaveStatus');
     if (el) { el.style.opacity = '1'; setTimeout(() => { el.style.opacity = '0'; }, 2000); }
@@ -1703,29 +1704,42 @@ function autoSave() {
  * - 이미 URL인 값은 그대로 통과시킨다.
  * - base64(data:)인 값은 Supabase Storage에 업로드하고 URL로 교체한 뒤
  *   IndexedDB도 URL로 갱신해서 다음 동기화부터는 페이로드가 작아지도록 한다.
- * - Supabase 미연결 또는 업로드 실패 시 원본 값을 그대로 페이로드에 둔다(폴백).
+ * - Storage 업로드 실패 시 null을 반환해 _photos에서 빠지도록 한다.
+ *   (base64를 페이로드에 다시 넣으면 페이로드가 너무 커져 동기화 자체가 실패하므로)
+ * 반환: { url, uploadFailed } 형태
  */
 async function ensurePhotoUrl(prefix, val) {
-  if (!val) return val;
-  if (isStorageUrl(val)) return val;
-  if (!sbClient || !isDataUrl(val)) return val;
+  if (!val) return { url: val, uploadFailed: false };
+  if (isStorageUrl(val)) return { url: val, uploadFailed: false };
+  if (!sbClient || !isDataUrl(val)) return { url: val, uploadFailed: false };
   try {
     const blob = dataUrlToBlob(val);
-    if (!blob) return val;
+    if (!blob) return { url: val, uploadFailed: false };
     const path = `${prefix}/${genPhotoId()}.jpg`;
-    return await sbUploadPhoto(path, blob);
-  } catch { return val; }
+    const url = await sbUploadPhoto(path, blob);
+    return { url, uploadFailed: false };
+  } catch (e) {
+    return { url: null, uploadFailed: true, error: e.message || String(e) };
+  }
 }
+
+// 사용자에게 한 번만 보여줄 사진 업로드 실패 상태(세션 내)
+let _photoUploadFailureReason = null;
 
 async function collectPhotosForSync() {
   const photos = {};
+  _photoUploadFailureReason = null;
 
   // 커플 사진
   const couplePhoto = await dbGet(PHOTO_KEY);
   if (couplePhoto) {
-    const url = await ensurePhotoUrl('couple', couplePhoto);
-    photos[PHOTO_KEY] = url;
-    if (url !== couplePhoto) await dbSave(PHOTO_KEY, url);
+    const r = await ensurePhotoUrl('couple', couplePhoto);
+    if (r.uploadFailed) {
+      _photoUploadFailureReason = r.error;
+    } else if (r.url) {
+      photos[PHOTO_KEY] = r.url;
+      if (r.url !== couplePhoto) await dbSave(PHOTO_KEY, r.url);
+    }
   }
 
   // 항목 사진
@@ -1734,9 +1748,15 @@ async function collectPhotosForSync() {
       const key = 'itemPhotos_' + item.id;
       const data = await dbGet(key);
       if (data && data.length) {
-        const urls = await Promise.all(data.map(v => ensurePhotoUrl('items/' + item.id, v)));
-        photos[key] = urls;
-        if (urls.some((u, i) => u !== data[i])) await dbSave(key, urls);
+        const results = await Promise.all(data.map(v => ensurePhotoUrl('items/' + item.id, v)));
+        const urls = results.filter(r => !r.uploadFailed && r.url).map(r => r.url);
+        const anyFail = results.some(r => r.uploadFailed);
+        if (anyFail) _photoUploadFailureReason = _photoUploadFailureReason || results.find(r => r.uploadFailed).error;
+        if (urls.length) {
+          photos[key] = urls;
+          // 모든 사진이 성공적으로 URL이 된 경우에만 IndexedDB 캐시 갱신
+          if (!anyFail && urls.some((u, i) => u !== data[i])) await dbSave(key, urls);
+        }
       }
     }
   }
@@ -1746,9 +1766,14 @@ async function collectPhotosForSync() {
     const key = 'refPhotos_' + ref.id;
     const data = await dbGet(key);
     if (data && data.length) {
-      const urls = await Promise.all(data.map(v => ensurePhotoUrl('refs/' + ref.id, v)));
-      photos[key] = urls;
-      if (urls.some((u, i) => u !== data[i])) await dbSave(key, urls);
+      const results = await Promise.all(data.map(v => ensurePhotoUrl('refs/' + ref.id, v)));
+      const urls = results.filter(r => !r.uploadFailed && r.url).map(r => r.url);
+      const anyFail = results.some(r => r.uploadFailed);
+      if (anyFail) _photoUploadFailureReason = _photoUploadFailureReason || results.find(r => r.uploadFailed).error;
+      if (urls.length) {
+        photos[key] = urls;
+        if (!anyFail && urls.some((u, i) => u !== data[i])) await dbSave(key, urls);
+      }
     }
   }
   return photos;
@@ -1770,7 +1795,13 @@ async function saveData() {
     const photos = await collectPhotosForSync();
     const payload = { ...currentData, _photos: photos };
     const res = await sbSave(payload);
-    showToast(res.ok ? '✅ 저장 및 동기화 완료' : '⚠️ 동기화 실패: ' + res.error);
+    if (!res.ok) {
+      showToast('⚠️ 동기화 실패: ' + res.error);
+    } else if (_photoUploadFailureReason) {
+      showToast('✅ 데이터 동기화 완료 · 사진 업로드 실패: ' + _photoUploadFailureReason);
+    } else {
+      showToast('✅ 저장 및 동기화 완료');
+    }
   } else {
     showToast('✅ 저장되었습니다');
   }
