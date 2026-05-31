@@ -1051,15 +1051,62 @@ async function sbLoad() {
 }
 
 async function sbSave(payload) {
-  if (!sbClient) return false;
+  if (!sbClient) return { ok: false, error: 'Supabase 미연결' };
   try {
     // 기존 행 삭제 후 새로 삽입 — id에 unique 제약이 없어도 중복 없이 동작
     await sbClient.from('wedding').delete().eq('id', 'main');
     const { error } = await sbClient.from('wedding')
       .insert({ id: 'main', payload, updated_at: new Date().toISOString() });
-    return !error;
-  } catch { return false; }
+    if (error) return { ok: false, error: error.message || String(error) };
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e.message || String(e) }; }
 }
+
+/* ═══════════════════════════════════════
+   Supabase Storage 헬퍼 (사진 파일 업로드)
+═══════════════════════════════════════ */
+const PHOTO_BUCKET = 'wedding-photos';
+
+function dataUrlToBlob(dataUrl) {
+  const m = /^data:([^;]+);base64,(.*)$/.exec(dataUrl || '');
+  if (!m) return null;
+  const mime = m[1] || 'image/jpeg';
+  const bin = atob(m[2]);
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return new Blob([u8], { type: mime });
+}
+
+function genPhotoId() {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+async function sbUploadPhoto(path, blob) {
+  if (!sbClient) throw new Error('Supabase 미연결');
+  const { error } = await sbClient.storage.from(PHOTO_BUCKET).upload(path, blob, {
+    contentType: blob.type || 'image/jpeg',
+    upsert: true,
+    cacheControl: '31536000'
+  });
+  if (error) throw new Error(error.message || '업로드 실패');
+  const { data } = sbClient.storage.from(PHOTO_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+function pathFromPublicUrl(url) {
+  if (typeof url !== 'string') return null;
+  const m = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+  return (m && m[1] === PHOTO_BUCKET) ? decodeURIComponent(m[2]) : null;
+}
+
+async function sbDeletePhotoByUrl(url) {
+  const path = pathFromPublicUrl(url);
+  if (!sbClient || !path) return;
+  try { await sbClient.storage.from(PHOTO_BUCKET).remove([path]); } catch {}
+}
+
+function isStorageUrl(v) { return typeof v === 'string' && /^https?:\/\//.test(v); }
+function isDataUrl(v)    { return typeof v === 'string' && v.startsWith('data:'); }
 
 async function saveSupabaseConfig() {
   const url = document.getElementById('sbUrl').value.trim();
@@ -1336,9 +1383,11 @@ function showPhotoPreview(src) {
   document.getElementById('photoDeleteBtn').style.display   = 'block';
 }
 
-function deletePhoto() {
+async function deletePhoto() {
   if (!confirm('사진을 삭제할까요?')) return;
-  dbDelete(PHOTO_KEY);
+  const prev = await dbGet(PHOTO_KEY);
+  await dbDelete(PHOTO_KEY);
+  if (isStorageUrl(prev)) sbDeletePhotoByUrl(prev);
   document.getElementById('photoPreview').style.display     = 'none';
   document.getElementById('photoPlaceholder').style.display = 'flex';
   document.getElementById('photoDeleteBtn').style.display   = 'none';
@@ -1520,8 +1569,9 @@ function buildItemCard(item, ci, ii) {
       del.onclick = async e => {
         e.stopPropagation();
         if (!confirm('이 사진을 삭제할까요?')) return;
-        photos.splice(idx, 1);
+        const removed = photos.splice(idx, 1)[0];
         await dbSave(PHOTOS_KEY, photos);
+        if (isStorageUrl(removed)) sbDeletePhotoByUrl(removed);
         refreshPhotoRow();
         autoSave();
       };
@@ -1640,31 +1690,66 @@ function autoSave() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
     if (sbClient) {
       const photos = await collectPhotosForSync();
-      await sbSave({ ...currentData, _photos: photos });
+      const res = await sbSave({ ...currentData, _photos: photos });
+      if (!res.ok) showToast('⚠️ 동기화 실패: ' + res.error);
     }
     const el = document.getElementById('autoSaveStatus');
     if (el) { el.style.opacity = '1'; setTimeout(() => { el.style.opacity = '0'; }, 2000); }
   }, 800);
 }
 
+/**
+ * IndexedDB에 있는 사진들을 Storage URL 형태로 모아 _photos 페이로드를 반환한다.
+ * - 이미 URL인 값은 그대로 통과시킨다.
+ * - base64(data:)인 값은 Supabase Storage에 업로드하고 URL로 교체한 뒤
+ *   IndexedDB도 URL로 갱신해서 다음 동기화부터는 페이로드가 작아지도록 한다.
+ * - Supabase 미연결 또는 업로드 실패 시 원본 값을 그대로 페이로드에 둔다(폴백).
+ */
+async function ensurePhotoUrl(prefix, val) {
+  if (!val) return val;
+  if (isStorageUrl(val)) return val;
+  if (!sbClient || !isDataUrl(val)) return val;
+  try {
+    const blob = dataUrlToBlob(val);
+    if (!blob) return val;
+    const path = `${prefix}/${genPhotoId()}.jpg`;
+    return await sbUploadPhoto(path, blob);
+  } catch { return val; }
+}
+
 async function collectPhotosForSync() {
   const photos = {};
+
   // 커플 사진
   const couplePhoto = await dbGet(PHOTO_KEY);
-  if (couplePhoto) photos[PHOTO_KEY] = couplePhoto;
+  if (couplePhoto) {
+    const url = await ensurePhotoUrl('couple', couplePhoto);
+    photos[PHOTO_KEY] = url;
+    if (url !== couplePhoto) await dbSave(PHOTO_KEY, url);
+  }
+
   // 항목 사진
   for (const cat of (currentData.categories || [])) {
     for (const item of (cat.items || [])) {
       const key = 'itemPhotos_' + item.id;
       const data = await dbGet(key);
-      if (data && data.length) photos[key] = data;
+      if (data && data.length) {
+        const urls = await Promise.all(data.map(v => ensurePhotoUrl('items/' + item.id, v)));
+        photos[key] = urls;
+        if (urls.some((u, i) => u !== data[i])) await dbSave(key, urls);
+      }
     }
   }
+
   // 레퍼런스 사진
   for (const ref of (currentData.refs || [])) {
     const key = 'refPhotos_' + ref.id;
     const data = await dbGet(key);
-    if (data && data.length) photos[key] = data;
+    if (data && data.length) {
+      const urls = await Promise.all(data.map(v => ensurePhotoUrl('refs/' + ref.id, v)));
+      photos[key] = urls;
+      if (urls.some((u, i) => u !== data[i])) await dbSave(key, urls);
+    }
   }
   return photos;
 }
@@ -1681,11 +1766,11 @@ async function saveData() {
   collectInfo();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
   if (sbClient) {
-    // 사진을 payload에 포함시켜 Supabase에 동기화
+    showToast('⏳ 동기화 중...');
     const photos = await collectPhotosForSync();
     const payload = { ...currentData, _photos: photos };
-    const ok = await sbSave(payload);
-    showToast(ok ? '✅ 저장 및 동기화 완료' : '✅ 저장됨 (동기화 실패)');
+    const res = await sbSave(payload);
+    showToast(res.ok ? '✅ 저장 및 동기화 완료' : '⚠️ 동기화 실패: ' + res.error);
   } else {
     showToast('✅ 저장되었습니다');
   }
@@ -1935,8 +2020,9 @@ function buildRefCard(ref, idx, container) {
         xBtn.textContent = '✕';
         xBtn.onclick = async () => {
           const all = await dbGet(RKEY) || [];
-          all.splice(pi, 1);
+          const removed = all.splice(pi, 1)[0];
           await dbSave(RKEY, all);
+          if (isStorageUrl(removed)) sbDeletePhotoByUrl(removed);
           refreshRefPhotos();
           autoSave();
         };
