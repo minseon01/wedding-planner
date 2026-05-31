@@ -548,10 +548,15 @@ async function render(data) {
           <span>${escHtml(item.date.trim())}</span>
         </div>`;
       if (item.memo)    body += `<div class="item-memo">📝 ${escHtml(item.memo)}</div>`;
-      if (item.address && item.address.trim()) body += `
-        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address.trim())}" class="item-site" target="_blank" rel="noopener noreferrer">
+      if (item.address && item.address.trim()) {
+        const mapHref = (item.mapLink && item.mapLink.trim())
+          ? item.mapLink.trim()
+          : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.address.trim());
+        body += `
+        <a href="${escAttr(mapHref)}" class="item-site" target="_blank" rel="noopener noreferrer">
           📍 주소 바로가기
         </a>`;
+      }
       if (item.site && item.site.trim()) body += `
         <a href="${escAttr(item.site.trim())}" class="item-site" target="_blank" rel="noopener noreferrer">
           📂 레퍼런스 바로가기

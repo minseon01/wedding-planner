@@ -1503,6 +1503,12 @@ function buildItemCard(item, ci, ii) {
                oninput="currentData.categories[${ci}].items[${ii}].address = this.value">
       </div>
       <div>
+        <div class="field-label">🗺️ 지도 링크 (선택)</div>
+        <input type="url" class="field-input" placeholder="네이버 지도 URL 등 — 비우면 주소로 자동 검색"
+               value="${escHtml(item.mapLink || '')}"
+               oninput="currentData.categories[${ci}].items[${ii}].mapLink = this.value">
+      </div>
+      <div>
         <div class="field-label">📅 날짜 · 일정</div>
         <input type="text" class="field-input" placeholder="예) 2025년 3월 15일 오후 2시"
                value="${escHtml(item.date || '')}"
