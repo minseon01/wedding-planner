@@ -1083,9 +1083,12 @@ function genPhotoId() {
 
 async function sbUploadPhoto(path, blob) {
   if (!sbClient) throw new Error('Supabase 미연결');
+  // upsert: false — 매번 고유 파일명을 쓰므로 덮어쓰기 불필요.
+  // upsert를 쓰면 Storage RLS가 INSERT 대신 UPDATE 정책으로 평가해서
+  // (UPDATE 정책이 없으면) "new row violates RLS"로 거절된다.
   const { error } = await sbClient.storage.from(PHOTO_BUCKET).upload(path, blob, {
     contentType: blob.type || 'image/jpeg',
-    upsert: true,
+    upsert: false,
     cacheControl: '31536000'
   });
   if (error) throw new Error(error.message || '업로드 실패');
